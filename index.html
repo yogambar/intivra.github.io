@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Intivra — Intimacy Experience Wheel | Discover Romantic Ideas</title>
+
+    <meta
+      name="description"
+      content="Cathy is a private intimacy experience wheel that helps couples discover romantic ideas, roleplay scenarios, positions, and connection activities through a beautifully designed interactive interface."
+    />
+
+    <meta
+      name="keywords"
+      content="intimacy app, romantic ideas, couple activities, roleplay ideas, relationship app, intimacy wheel, romantic game, couples experience, relationship builder, intimacy generator"
+    />
+
+    <meta name="author" content="Yogambar Singh" />
+
+    <meta name="robots" content="index, follow" />
+
+    <meta name="theme-color" content="#ff4b6e" />
+
+    <meta property="og:title" content="Cathy — Intimacy Experience Wheel" />
+    <meta
+      property="og:description"
+      content="Discover curated intimacy experiences, romantic ideas, and connection activities with Cathy."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:image"
+      content="https://source.unsplash.com/800x600/?romantic,couple"
+    />
+    <meta property="og:url" content="https://cathy.app" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cathy — Intimacy Experience Wheel" />
+    <meta
+      name="twitter:description"
+      content="Spin the wheel to discover new intimacy experiences and romantic ideas."
+    />
+
+    <link rel="stylesheet" href="style.css" />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div class="background-hearts" id="hearts"></div>
+
+    <div class="main-container">
+      <div class="glass-card">
+        <div class="brand">Intivra</div>
+        <div class="headline">Intimacy Experience Wheel</div>
+        <div class="subtext">
+          Explore curated intimacy experiences designed to inspire connection,
+          emotional closeness, and shared discovery. Spin the wheel to reveal
+          guided roleplay scenarios, positions, and romantic activities.
+        </div>
+
+        <div class="segmented-control" id="segmentControl">
+          <div class="segment-indicator"></div>
+
+          <button class="segment active toggle" data-type="roleplay">
+            <span class="segment-label">Roleplay</span>
+          </button>
+
+          <button class="segment toggle" data-type="position">
+            <span class="segment-label">Positions</span>
+          </button>
+
+          <button class="segment toggle" data-type="dare">
+            <span class="segment-label">Dares</span>
+          </button>
+        </div>
+
+        <div class="wheel-section">
+          <div class="selector-zone">
+            <div class="selector-glass">
+              <div class="selector-ring"></div>
+            </div>
+          </div>
+
+          <div class="pointer-wrapper">
+            <div class="pointer"></div>
+          </div>
+
+          <div class="wheel-wrapper">
+            <div class="wheel-container">
+              <div class="wheel" id="wheel"></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn">Spin</button>
+
+        <div class="footer-note">
+          For consenting adults • Explore responsibly
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="resultModal">
+      <div class="result-card glass-result">
+        <div class="result-header-row">
+          <img
+            id="resultMainImage"
+            class="result-main-image"
+            src="https://source.unsplash.com/400x400/?romantic,couple"
+          />
+
+          <div class="result-title-block">
+            <div class="result-title" id="resultTitle"></div>
+
+            <div class="result-subtitle" id="resultSubtitle"></div>
+          </div>
+        </div>
+
+        <div class="result-sub-section">
+          <div class="result-sub-title">Overview</div>
+
+          <div class="result-sub" id="resultDescription"></div>
+        </div>
+
+        <div class="result-sub-section">
+          <div class="result-sub-title">How to Explore</div>
+
+          <div class="result-sub" id="resultHowto"></div>
+        </div>
+
+        <div class="result-sub-section">
+          <div class="result-sub-title">Inspiration</div>
+
+          <div class="result-gallery" id="resultGallery"></div>
+        </div>
+
+        <div class="result-actions">
+          <button class="search-btn" id="searchBtn">Discover More</button>
+
+          <button class="close-btn" id="closeBtn">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <audio id="tickSound" src="tick.mp3" preload="auto"></audio>
+  </body>
+</html>
