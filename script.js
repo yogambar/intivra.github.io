@@ -3,7 +3,6 @@
 const heartsContainer = document.getElementById("hearts");
 const wheel = document.getElementById("wheel");
 const spinBtn = document.getElementById("spinBtn");
-
 const segmentControl = document.getElementById("segmentControl");
 
 const modal = document.getElementById("resultModal");
@@ -21,12 +20,16 @@ const toggleButtons = document.querySelectorAll(".toggle");
 const selectorGlass = document.querySelector(".selector-glass");
 const tickSound = document.getElementById("tickSound");
 
+const UNSPLASH_KEY = "Q8AR4qJNRsiKVhcSL0CZ1-ZVh3AQwuplKL8odvZsYOU";
+const PEXELS_KEY = "7Mnxe2W1ZMTTrH4vtYY5PyymCI1fAq6HJ1hx8LRACuzA2qb5x9d4yGfe";
+
 const CONFIG = {
   visibleItems: 8,
   radius: 260,
   spinSpeed: 90,
-  minSpinSteps: 12,
-  maxSpinSteps: 20,
+  minSpinSteps: 15,
+  maxSpinSteps: 25,
+  searchSuffix: "romantic couple soft lighting lifestyle",
 };
 
 let state = {
@@ -37,26 +40,75 @@ let state = {
   currentResult: null,
 };
 
+const imageCache = {};
+
 const fallbackIcon = (title) => {
   const seed = encodeURIComponent(title.trim().toLowerCase());
-  return `https://api.dicebear.com/7.x/icons/svg?seed=${seed}&backgroundColor=ffffff`;
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
 };
 
-const assignIcon = async (img, item) => {
-  const primary = item.icon;
-
-  if (primary && primary.trim() !== "") {
-    img.src = primary;
-
-    img.onerror = async () => {
-      const fallback = await fetchPexelsSingle(item.title);
-      img.src = fallback || fallbackIcon(item.title);
-    };
-  } else {
-    const fallback = await fetchPexelsSingle(item.title);
-    img.src = fallback || fallbackIcon(item.title);
+async function fetchPexels(query, count = 6) {
+  try {
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=${count}`,
+      { headers: { Authorization: PEXELS_KEY } },
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.photos ? data.photos.map((p) => p.src.medium) : [];
+  } catch {
+    return [];
   }
-};
+}
+
+async function fetchUnsplash(query, count = 6) {
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}`,
+      { headers: { Authorization: `Client-ID ${UNSPLASH_KEY}` } },
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results ? data.results.map((p) => p.urls.small) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchImages(query, count = 6) {
+  const cacheKey = query + count;
+  if (imageCache[cacheKey]) return imageCache[cacheKey];
+
+  const pexelsPromise = fetchPexels(query, count);
+  const unsplashPromise = fetchUnsplash(query, count);
+
+  const pexels = await pexelsPromise;
+  if (pexels.length) {
+    imageCache[cacheKey] = pexels;
+    return pexels;
+  }
+
+  const unsplash = await unsplashPromise;
+  imageCache[cacheKey] = unsplash;
+  return unsplash;
+}
+
+async function assignIcon(img, item) {
+  img.loading = "lazy";
+  img.decoding = "async";
+
+  if (state.currentType === "position" && item.icon) {
+    img.src = item.icon;
+    img.onerror = () => (img.src = fallbackIcon(item.title));
+    return;
+  }
+
+  img.src = fallbackIcon(item.title);
+
+  const results = await fetchImages(item.title + " " + CONFIG.searchSuffix, 1);
+
+  if (results.length) img.src = results[0];
+}
 
 function createHearts() {
   heartsContainer.innerHTML = "";
@@ -73,26 +125,16 @@ function createHearts() {
 }
 
 async function loadData(type) {
-  try {
-    state.currentType = type;
-    spinBtn.disabled = true;
+  state.currentType = type;
+  spinBtn.disabled = true;
 
-    const response = await fetch(`./${type}.json`, { cache: "no-store" });
-    if (!response.ok) throw new Error();
+  const response = await fetch(`./${type}.json`, { cache: "no-store" });
+  state.data = await response.json();
+  state.visibleStartIndex = 0;
 
-    const data = await response.json();
-    if (!Array.isArray(data)) throw new Error();
-
-    state.data = data;
-    state.visibleStartIndex = 0;
-
-    buildWheel();
-    updateSelectorIcon();
-  } catch {
-    alert("Unable to load data.");
-  } finally {
-    spinBtn.disabled = false;
-  }
+  buildWheel();
+  updateSelectorIcon();
+  spinBtn.disabled = false;
 }
 
 function buildWheel() {
@@ -102,9 +144,9 @@ function buildWheel() {
 
 function renderVisibleItems(immediate = false) {
   const total = state.data.length;
-  const visible = CONFIG.visibleItems;
   if (!total) return;
 
+  const visible = CONFIG.visibleItems;
   const angleStep = 180 / (visible - 1);
   const centerIndex = Math.floor(visible / 2);
 
@@ -125,51 +167,35 @@ function renderVisibleItems(immediate = false) {
 
     const angle = (i - centerIndex) * angleStep;
     const radians = (angle * Math.PI) / 180;
-
     const x = CONFIG.radius * Math.sin(radians);
     const y = -CONFIG.radius * Math.cos(radians);
-
     const distance = Math.abs(i - centerIndex);
 
     let scale = 0.75;
-    if (distance === 0) scale = 1.2;
+    if (distance === 0) scale = 1.3;
     else if (distance === 1) scale = 1.0;
-    else if (distance === 2) scale = 0.9;
+    else if (distance === 2) scale = 0.85;
 
     wrapper.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-
-    if (distance === 0) wrapper.style.opacity = "0";
-    else if (distance === 1) wrapper.style.opacity = "0.4";
-    else if (distance === 2) wrapper.style.opacity = "0.25";
-    else wrapper.style.opacity = "0.15";
-
+    wrapper.style.opacity =
+      distance === 0 ? "0" : distance === 1 ? "0.6" : "0.3";
     wrapper.style.transition = immediate
       ? "none"
-      : "transform 0.35s ease, opacity 0.35s ease";
+      : "transform 0.2s ease-out, opacity 0.2s ease-out";
 
     wheel.appendChild(wrapper);
   }
 }
 
 function updateSelectorIcon() {
-  const centerIndex =
-    (state.visibleStartIndex + Math.floor(CONFIG.visibleItems / 2)) %
-    state.data.length;
-
+  const centerPos = Math.floor(CONFIG.visibleItems / 2);
+  const centerIndex = (state.visibleStartIndex + centerPos) % state.data.length;
   const item = state.data[centerIndex];
 
   selectorGlass.innerHTML = "";
-
   const img = document.createElement("img");
-  img.style.width = "64px";
-  img.style.height = "64px";
-  img.style.borderRadius = "50%";
-  img.style.background = "white";
-  img.style.padding = "8px";
-  img.style.boxShadow = "0 10px 25px rgba(0,0,0,0.3)";
-
+  img.className = "selector-img-style";
   assignIcon(img, item);
-
   selectorGlass.appendChild(img);
 }
 
@@ -187,81 +213,26 @@ function spinWheel() {
 
   const interval = setInterval(() => {
     state.visibleStartIndex = (state.visibleStartIndex + 1) % state.data.length;
-
     renderVisibleItems();
     updateSelectorIcon();
 
     if (tickSound) {
       const tick = tickSound.cloneNode();
-      tick.volume = 0.4;
+      tick.volume = 0.2;
       tick.play().catch(() => {});
     }
 
     currentStep++;
-
     if (currentStep >= totalSteps) {
       clearInterval(interval);
-
-      const finalIndex =
+      const finalIdx =
         (state.visibleStartIndex + Math.floor(CONFIG.visibleItems / 2)) %
         state.data.length;
-
-      const item = state.data[finalIndex];
-
-      selectorGlass.classList.remove("pulse");
-      void selectorGlass.offsetWidth;
-      selectorGlass.classList.add("pulse");
-
-      showResult(item);
-
+      showResult(state.data[finalIdx]);
       state.isSpinning = false;
       spinBtn.disabled = false;
     }
   }, CONFIG.spinSpeed);
-}
-
-async function getGalleryImages(item) {
-  const keywords = `${item.title} couple ${state.currentType} illustration guide`;
-
-  try {
-    const response = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(keywords)}&per_page=4`,
-      {
-        headers: {
-          Authorization:
-            "3gVWj8OVC4PfooaG9Uj1geXtG8GvCJCfXzHOUms28J9JKPHjcdRN3p89",
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    if (data.photos && data.photos.length > 0) {
-      return data.photos.map((photo) => photo.src.medium);
-    }
-  } catch {}
-
-  return [];
-}
-
-async function fetchPexelsSingle(title) {
-  try {
-    const response = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(title + " couple illustration")}&per_page=1`,
-      {
-        headers: {
-          Authorization:
-            "3gVWj8OVC4PfooaG9Uj1geXtG8GvCJCfXzHOUms28J9JKPHjcdRN3p89",
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    if (data.photos && data.photos.length > 0) return data.photos[0].src.medium;
-  } catch {}
-
-  return null;
 }
 
 async function showResult(item) {
@@ -271,43 +242,40 @@ async function showResult(item) {
   resultSubtitle.textContent = item.subtitle || "";
   resultDescription.textContent = item.description || "";
   resultHowto.textContent = item.howto || "";
-
-  if (item.icon && item.icon.trim() !== "") {
-    resultMainImage.src = item.icon;
-
-    resultMainImage.onerror = async () => {
-      const fallback = await fetchPexelsSingle(item.title);
-      resultMainImage.src = fallback || fallbackIcon(item.title);
-    };
-  } else {
-    const fallback = await fetchPexelsSingle(item.title);
-    resultMainImage.src = fallback || fallbackIcon(item.title);
-  }
-
   resultGallery.innerHTML = "";
 
-  const galleryImages = await getGalleryImages(item);
-
-  galleryImages.forEach((src, index) => {
-    const img = document.createElement("img");
-
-    img.crossOrigin = "anonymous";
-    img.referrerPolicy = "no-referrer";
-
-    img.src = src + "&t=" + Date.now() + index;
-
-    img.onerror = () => {
-      img.src = `https://picsum.photos/seed/${index}/400/400`;
-    };
-
-    img.onclick = () => {
-      resultMainImage.src = img.src;
-    };
-
-    resultGallery.appendChild(img);
-  });
-
   modal.style.display = "flex";
+
+  const searchQuery = item.title + " " + CONFIG.searchSuffix;
+
+  const results = await fetchImages(searchQuery, 6);
+
+  if (state.currentType === "position" && item.icon) {
+    resultMainImage.src = item.icon;
+  } else if (results.length) {
+    resultMainImage.src = results[0];
+  } else {
+    resultMainImage.src = fallbackIcon(item.title);
+  }
+
+  if (results.length) {
+    const galleryImages =
+      state.currentType === "position"
+        ? results.slice(0, 4)
+        : results.slice(1, 5);
+
+    galleryImages.forEach((src) => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.loading = "lazy";
+      img.onclick = () => {
+        const current = resultMainImage.src;
+        resultMainImage.src = src;
+        img.src = current;
+      };
+      resultGallery.appendChild(img);
+    });
+  }
 }
 
 function closeModal() {
@@ -316,15 +284,9 @@ function closeModal() {
 
 function searchWeb() {
   if (!state.currentResult) return;
-
-  const query =
-    state.currentResult.title +
-    " sex " +
-    state.currentType +
-    " images and videos";
-
+  const query = `${state.currentResult.title} intimacy ${state.currentType}`;
   window.open(
-    "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(query),
+    `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`,
     "_blank",
   );
 }
@@ -333,9 +295,7 @@ toggleButtons.forEach((btn, index) => {
   btn.addEventListener("click", () => {
     toggleButtons.forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-
-    segmentControl.setAttribute("data-active", index);
-
+    if (segmentControl) segmentControl.setAttribute("data-active", index);
     loadData(btn.dataset.type);
   });
 });
@@ -346,4 +306,3 @@ searchBtn.addEventListener("click", searchWeb);
 
 createHearts();
 loadData("roleplay");
-
