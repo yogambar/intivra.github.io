@@ -321,7 +321,7 @@ function searchWeb() {
     state.currentResult.title +
     " sex " +
     state.currentType +
-    " couple illustration diagram";
+    " images and videos";
 
   window.open(
     "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(query),
@@ -346,3 +346,4 @@ searchBtn.addEventListener("click", searchWeb);
 
 createHearts();
 loadData("roleplay");
+
